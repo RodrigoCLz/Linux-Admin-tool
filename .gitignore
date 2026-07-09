@@ -1,0 +1,17 @@
+bin/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.DS_Store
+*.swp
+*.swo
+*~
+historial_comandos.json
+historial_descargas.json
+historial_respaldos.json
+config_respaldos.json
+respaldos/
+descargas/

@@ -1,0 +1,6 @@
+# Linux Admin Tool - Dependencias
+# tkinter viene incluido con Python, no necesita instalación
+# psutil se usa como respaldo, el principal es el binario C
+# requests solo para funcionalidad extra
+psutil>=5.0.0
+requests>=2.25.0
