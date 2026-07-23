@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Linux Admin Tool - Herramienta de administración para Linux
-Integra monitoreo de procesos, gestión de archivos,
-respaldo automático, ejecución de comandos y análisis de scripts Bash.
+Linux Admin Tool v1.0
+Herramienta de administración para Linux que integra monitoreo de procesos,
+gestión de archivos, respaldo automático, ejecución de comandos y
+análisis de scripts Bash.
 """
 
 import sys
