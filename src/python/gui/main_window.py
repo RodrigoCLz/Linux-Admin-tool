@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import os
 from gui.procesos_frame import ProcesosFrame
 from gui.archivos_frame import ArchivosFrame
 from gui.comandos_frame import ComandosFrame
@@ -49,8 +50,17 @@ class MainWindow:
         header = ttk.Frame(self.root, style='Header.TFrame')
         header.pack(fill=tk.X, side=tk.TOP)
 
-        ttk.Label(header, text="🐧 Linux Admin Tool", style='Header.TLabel').pack(
-            side=tk.LEFT, padx=15, pady=10)
+        logo_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'logo_unsa.png')
+        try:
+            logo_img = tk.PhotoImage(file=logo_path)
+            logo_label = ttk.Label(header, image=logo_img, style='Header.TLabel')
+            logo_label.image = logo_img
+            logo_label.pack(side=tk.LEFT, padx=(10, 2), pady=5)
+        except Exception:
+            pass
+
+        ttk.Label(header, text=" Linux Admin Tool", style='Header.TLabel').pack(
+            side=tk.LEFT, padx=(2, 15), pady=10)
 
         modulos = [
             ('procesos', '⚙ Procesos'),
