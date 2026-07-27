@@ -106,12 +106,19 @@ class BashFrame(ttk.Frame):
         self.result_text.insert(tk.END, f"Líneas comentarios: {r['lineas_comentarios']}\n")
         self.result_text.insert(tk.END, f"Funciones: {len(r['funciones'])}\n")
         self.result_text.insert(tk.END, f"Variables: {len(r['variables'])}\n")
+        self.result_text.insert(tk.END, f"Ciclos (for/while/until): {len(r['ciclos'])}\n")
         self.result_text.insert(tk.END, f"Advertencias: {len(r['warnings'])}\n\n")
 
         if r['funciones']:
             self.result_text.insert(tk.END, "=== Funciones ===\n", 'section')
             for f in r['funciones']:
                 self.result_text.insert(tk.END, f"  L{f['linea']}: {f['nombre']}()\n")
+            self.result_text.insert(tk.END, "\n")
+
+        if r['ciclos']:
+            self.result_text.insert(tk.END, "=== Ciclos detectados ===\n", 'section')
+            for c in r['ciclos']:
+                self.result_text.insert(tk.END, f"  L{c['linea']}: [{c['tipo']}] {c['contenido']}\n")
             self.result_text.insert(tk.END, "\n")
 
         if r['warnings']:

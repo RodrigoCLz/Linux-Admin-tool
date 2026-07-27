@@ -9,6 +9,7 @@ class ProcesosFrame(ttk.Frame):
         super().__init__(parent)
         self.app = app
         self.procesos = []
+        self.vista_arbol = False
 
         self._build_ui()
         self.cargar_datos()
@@ -25,7 +26,11 @@ class ProcesosFrame(ttk.Frame):
 
         ttk.Button(btn_frame, text="🔄 Actualizar", command=self.cargar_datos_thread).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="✖ Matar", command=self.matar_proceso).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="⏸ Suspender", command=self.suspender_proceso).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_frame, text="▶ Reanudar", command=self.reanudar_proceso).pack(side=tk.LEFT, padx=2)
         ttk.Button(btn_frame, text="🎯 Prioridad", command=self.cambiar_prioridad).pack(side=tk.LEFT, padx=2)
+        self.arbol_btn = ttk.Button(btn_frame, text="🌳 Árbol", command=self.toggle_vista)
+        self.arbol_btn.pack(side=tk.LEFT, padx=2)
 
         filter_frame = ttk.Frame(self)
         filter_frame.pack(fill=tk.X, pady=5)
@@ -35,7 +40,7 @@ class ProcesosFrame(ttk.Frame):
         ttk.Entry(filter_frame, textvariable=self.filter_var, width=30).pack(side=tk.LEFT, padx=5)
 
         columns = ('pid', 'nombre', 'cpu', 'mem', 'estado', 'usuario')
-        self.tree = ttk.Treeview(self, columns=columns, show='headings', height=20)
+        self.tree = ttk.Treeview(self, columns=columns, show='tree headings', height=20)
 
         headings = {'pid': 'PID', 'nombre': 'Nombre', 'cpu': 'CPU %',
                     'mem': 'Mem %', 'estado': 'Estado', 'usuario': 'Usuario'}
@@ -72,32 +77,94 @@ class ProcesosFrame(ttk.Frame):
     def _mostrar_datos(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
+        if self.vista_arbol:
+            self._mostrar_arbol()
+        else:
+            self._mostrar_lista()
+        self.app.set_status(f"Procesos: {len(self.procesos)} cargados")
+
+    def _mostrar_lista(self):
         for p in self.procesos:
             self.tree.insert('', tk.END, values=(
                 p['pid'], p['nombre'], f"{p['cpu']:.1f}", f"{p['mem']:.1f}",
                 p['estado'], p['usuario']
             ))
-        self.app.set_status(f"Procesos: {len(self.procesos)} cargados")
+
+    def _mostrar_arbol(self):
+        hijos = {}
+        for p in self.procesos:
+            ppid = p['ppid']
+            if ppid not in hijos:
+                hijos[ppid] = []
+            hijos[ppid].append(p)
+
+        def insertar_hijos(parent_id, ppid):
+            for p in hijos.get(ppid, []):
+                pid = p['pid']
+                node_id = self.tree.insert(parent_id, tk.END, values=(
+                    pid, p['nombre'], f"{p['cpu']:.1f}", f"{p['mem']:.1f}",
+                    p['estado'], p['usuario']
+                ))
+                insertar_hijos(node_id, pid)
+
+        insertar_hijos('', 0)
 
     def _filtrar(self):
         filtro = self.filter_var.get().lower()
         for item in self.tree.get_children():
             self.tree.delete(item)
+        if self.vista_arbol:
+            self._mostrar_arbol_filtrado(filtro)
+        else:
+            for p in self.procesos:
+                if filtro in p['nombre'].lower() or filtro in str(p['pid']) or filtro in p['usuario'].lower():
+                    self.tree.insert('', tk.END, values=(
+                        p['pid'], p['nombre'], f"{p['cpu']:.1f}", f"{p['mem']:.1f}",
+                        p['estado'], p['usuario']
+                    ))
+
+    def _mostrar_arbol_filtrado(self, filtro):
+        hijos = {}
         for p in self.procesos:
-            if filtro in p['nombre'].lower() or filtro in str(p['pid']) or filtro in p['usuario'].lower():
-                self.tree.insert('', tk.END, values=(
-                    p['pid'], p['nombre'], f"{p['cpu']:.1f}", f"{p['mem']:.1f}",
+            ppid = p['ppid']
+            if ppid not in hijos:
+                hijos[ppid] = []
+            hijos[ppid].append(p)
+
+        def insertar_hijos(parent_id, ppid):
+            for p in hijos.get(ppid, []):
+                coincide = (filtro in p['nombre'].lower() or
+                            filtro in str(p['pid']) or
+                            filtro in p['usuario'].lower())
+                pid = p['pid']
+                node_id = self.tree.insert(parent_id, tk.END, values=(
+                    pid, p['nombre'], f"{p['cpu']:.1f}", f"{p['mem']:.1f}",
                     p['estado'], p['usuario']
                 ))
+                if not coincide:
+                    self.tree.detach(node_id)
+                insertar_hijos(node_id, pid)
 
-    def matar_proceso(self):
+        insertar_hijos('', 0)
+
+    def toggle_vista(self):
+        self.vista_arbol = not self.vista_arbol
+        self.arbol_btn.config(text="📋 Lista" if self.vista_arbol else "🌳 Árbol")
+        self._mostrar_datos()
+
+    def _get_selected_pid(self):
         sel = self.tree.selection()
         if not sel:
             messagebox.showwarning("Seleccionar", "Seleccione un proceso primero")
-            return
+            return None
         item = self.tree.item(sel[0])
-        pid = item['values'][0]
-        nombre = item['values'][1]
+        return item['values'][0], item['values'][1]
+
+    def matar_proceso(self):
+        r = self._get_selected_pid()
+        if not r:
+            return
+        pid, nombre = r
         if messagebox.askyesno("Confirmar", f"¿Matar proceso {nombre} (PID {pid})?"):
             try:
                 msg = proc_mod.matar_proceso(pid)
@@ -106,14 +173,35 @@ class ProcesosFrame(ttk.Frame):
             except Exception as e:
                 messagebox.showerror("Error", str(e))
 
-    def cambiar_prioridad(self):
-        sel = self.tree.selection()
-        if not sel:
-            messagebox.showwarning("Seleccionar", "Seleccione un proceso primero")
+    def suspender_proceso(self):
+        r = self._get_selected_pid()
+        if not r:
             return
-        item = self.tree.item(sel[0])
-        pid = item['values'][0]
-        nombre = item['values'][1]
+        pid, nombre = r
+        try:
+            msg = proc_mod.matar_proceso(pid, 19)
+            self.app.set_status(f"Suspendido: {nombre} (PID {pid})")
+            self.cargar_datos_thread()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def reanudar_proceso(self):
+        r = self._get_selected_pid()
+        if not r:
+            return
+        pid, nombre = r
+        try:
+            msg = proc_mod.matar_proceso(pid, 18)
+            self.app.set_status(f"Reanudado: {nombre} (PID {pid})")
+            self.cargar_datos_thread()
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def cambiar_prioridad(self):
+        r = self._get_selected_pid()
+        if not r:
+            return
+        pid, nombre = r
 
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Prioridad - {nombre}")
@@ -137,11 +225,14 @@ class ProcesosFrame(ttk.Frame):
         ttk.Button(dialog, text="Aplicar", command=aplicar).pack(pady=10)
 
     def mostrar_detalle(self):
-        sel = self.tree.selection()
-        if not sel:
+        r = self._get_selected_pid()
+        if not r:
             return
-        item = self.tree.item(sel[0])
-        vals = item['values']
-        msg = (f"PID: {vals[0]}\nNombre: {vals[1]}\nCPU: {vals[2]}%\n"
-               f"Mem: {vals[3]}%\nEstado: {vals[4]}\nUsuario: {vals[5]}")
-        messagebox.showinfo("Detalle del Proceso", msg)
+        pid, nombre = r
+        for p in self.procesos:
+            if p['pid'] == pid:
+                msg = (f"PID: {pid}\nNombre: {nombre}\nCPU: {p['cpu']}%\n"
+                       f"Mem: {p['mem']}%\nEstado: {p['estado']}\n"
+                       f"Usuario: {p['usuario']}\nPPID: {p['ppid']}")
+                messagebox.showinfo("Detalle del Proceso", msg)
+                break

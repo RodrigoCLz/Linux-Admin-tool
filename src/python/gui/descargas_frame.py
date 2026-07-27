@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import threading
 import os
+import subprocess
 from modules import descargas as dl_mod
 
 
@@ -97,11 +98,22 @@ class DescargasFrame(ttk.Frame):
 
         def on_update(dl):
             self.root.after(0, self._refrescar_tabla)
+            if dl.estado == 'completado':
+                self.root.after(0, lambda: self._notificar_descarga(dl))
 
         dl = dl_mod.nueva_descarga(url, destino, nombre, callback=on_update)
         self.app.set_status(f"Descargando: {dl.nombre}")
         self.url_var.set('')
         self.nombre_var.set('')
+
+    def _notificar_descarga(self, dl):
+        try:
+            subprocess.run(['notify-send', 'Linux Admin Tool',
+                            f'Descarga completada: {dl.nombre}',
+                            '--icon=dialog-information'], timeout=5)
+        except FileNotFoundError:
+            pass
+        self.app.set_status(f"Descarga completada: {dl.nombre}")
 
     def _refrescar_tabla(self):
         self.descargas = dl_mod.listar_descargas_activas()

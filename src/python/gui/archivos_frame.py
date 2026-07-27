@@ -32,6 +32,7 @@ class ArchivosFrame(ttk.Frame):
         ttk.Button(nav, text="✄ Mover", command=self.mover_archivo).pack(side=tk.LEFT, padx=2)
         ttk.Button(nav, text="🗑 Eliminar", command=self.eliminar_archivo).pack(side=tk.LEFT, padx=2)
         ttk.Button(nav, text="🔍 Buscar", command=self.buscar_archivos).pack(side=tk.LEFT, padx=2)
+        ttk.Button(nav, text="📊 Estadísticas", command=self.mostrar_estadisticas).pack(side=tk.LEFT, padx=2)
 
         path_frame = ttk.Frame(self)
         path_frame.pack(fill=tk.X, pady=2)
@@ -224,3 +225,48 @@ class ArchivosFrame(ttk.Frame):
                 result_text.insert(tk.END, f"Error: {str(e)}")
 
         ttk.Button(dialog, text="Buscar", command=buscar).pack()
+
+    def mostrar_estadisticas(self):
+        def run():
+            try:
+                stats = file_mod.estadisticas(self.current_path)
+                self.root.after(0, lambda: self._mostrar_stats(stats))
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("Error", str(e)))
+
+        t = threading.Thread(target=run, daemon=True)
+        t.start()
+
+    def _format_size(self, size):
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024:
+                return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} TB"
+
+    def _mostrar_stats(self, stats):
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Estadísticas - {stats['directorio']}")
+        dialog.geometry("600x450")
+        dialog.transient(self.root)
+
+        text = tk.Text(dialog, font=('Courier', 10))
+        text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        text.insert(tk.END, f"Directorio: {stats['directorio']}\n")
+        text.insert(tk.END, f"Directorios: {stats['total_dirs']}\n")
+        text.insert(tk.END, f"Archivos: {stats['total_archivos']}\n")
+        text.insert(tk.END, f"Tamaño total: {self._format_size(stats['total_size'])}\n\n")
+
+        text.insert(tk.END, "Tamaño por tipo de archivo:\n", 'bold')
+        text.tag_config('bold', font=('Courier', 10, 'bold'))
+        for ext, size in list(stats['tamano_por_tipo'].items())[:15]:
+            text.insert(tk.END, f"  {ext:12} → {self._format_size(size)}\n")
+
+        if stats['archivos_grandes']:
+            text.insert(tk.END, "\nArchivos más grandes:\n", 'bold')
+            for ruta, size in stats['archivos_grandes'][:10]:
+                text.insert(tk.END, f"  {self._format_size(size):>10}  {ruta}\n")
+
+        if stats['errores'] > 0:
+            text.insert(tk.END, f"\nErrores de permisos: {stats['errores']}\n")

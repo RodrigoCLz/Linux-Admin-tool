@@ -104,3 +104,38 @@ def buscar(patron, directorio='.'):
                 except (PermissionError, OSError):
                     pass
     return resultados
+
+def estadisticas(directorio='.'):
+    directorio = os.path.abspath(directorio)
+    total_archivos = 0
+    total_dirs = 0
+    total_size = 0
+    tamano_por_tipo = {}
+    archivos_grandes = []
+    errores = 0
+
+    for root, dirs, files in os.walk(directorio):
+        for d in dirs:
+            total_dirs += 1
+        for f in files:
+            total_archivos += 1
+            try:
+                st = os.stat(os.path.join(root, f))
+                total_size += st.st_size
+                ext = os.path.splitext(f)[1].lower() or '(sin ext)'
+                tamano_por_tipo[ext] = tamano_por_tipo.get(ext, 0) + st.st_size
+                archivos_grandes.append((os.path.join(root, f), st.st_size))
+            except (PermissionError, OSError):
+                errores += 1
+
+    archivos_grandes.sort(key=lambda x: -x[1])
+
+    return {
+        'directorio': directorio,
+        'total_archivos': total_archivos,
+        'total_dirs': total_dirs,
+        'total_size': total_size,
+        'tamano_por_tipo': dict(sorted(tamano_por_tipo.items(), key=lambda x: -x[1])),
+        'archivos_grandes': archivos_grandes[:10],
+        'errores': errores,
+    }

@@ -22,7 +22,7 @@ def listar_procesos():
         if not line.strip():
             continue
         parts = line.split('\t')
-        if len(parts) >= 6:
+        if len(parts) >= 7:
             procesos.append({
                 'pid': int(parts[0]),
                 'nombre': parts[1],
@@ -30,6 +30,7 @@ def listar_procesos():
                 'mem': float(parts[3]),
                 'estado': parts[4],
                 'usuario': parts[5],
+                'ppid': int(parts[6]),
             })
     return procesos
 

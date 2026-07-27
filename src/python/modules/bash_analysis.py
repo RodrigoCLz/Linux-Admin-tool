@@ -19,6 +19,7 @@ def analizar_script(ruta):
         'lineas_comentarios': sum(1 for l in lines if l.strip().startswith('#')),
         'funciones': [],
         'variables': [],
+        'ciclos': [],
         'warnings': [],
         'shellcheck': None,
         'errores_sintaxis': [],
@@ -43,6 +44,20 @@ def analizar_script(ruta):
         m = re.match(r'^\s*(\w+)=', line)
         if m and not line.strip().startswith('#'):
             resultado['variables'].append({'nombre': m.group(1), 'linea': i})
+
+    pattern_for = re.compile(r'^\s*(for\s+\w+\s+in|for\s*\(\(|for\s+\w+\s*;)', re.IGNORECASE)
+    pattern_while = re.compile(r'^\s*while\s+', re.IGNORECASE)
+    pattern_until = re.compile(r'^\s*until\s+', re.IGNORECASE)
+    for i, line in enumerate(lines, 1):
+        stripped = line.strip()
+        if stripped.startswith('#'):
+            continue
+        if pattern_for.search(stripped):
+            resultado['ciclos'].append({'tipo': 'for', 'linea': i, 'contenido': stripped[:60]})
+        elif pattern_while.search(stripped):
+            resultado['ciclos'].append({'tipo': 'while', 'linea': i, 'contenido': stripped[:60]})
+        elif pattern_until.search(stripped):
+            resultado['ciclos'].append({'tipo': 'until', 'linea': i, 'contenido': stripped[:60]})
 
     # Check for common issues
     for i, line in enumerate(lines, 1):

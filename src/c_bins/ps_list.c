@@ -39,7 +39,7 @@ long get_process_ram_kb(int pid) {
     return rss;
 }
 
-int read_stat_file(int pid, unsigned long long *utime, unsigned long long *stime, char *state, int state_size __attribute__((unused)), char *comm, int comm_size) {
+int read_stat_file(int pid, unsigned long long *utime, unsigned long long *stime, int *ppid, char *state, int state_size __attribute__((unused)), char *comm, int comm_size) {
     char path[256];
     snprintf(path, sizeof(path), "/proc/%d/stat", pid);
     FILE *fp = fopen(path, "r");
@@ -72,6 +72,7 @@ int read_stat_file(int pid, unsigned long long *utime, unsigned long long *stime
         vals[i] = strtoull(p, &p, 10);
     }
 
+    *ppid = (int)vals[0];
     *utime = vals[11];
     *stime = vals[12];
     return 0;
@@ -100,6 +101,7 @@ char *get_username(uid_t uid) {
 
 struct proc_sample {
     int pid;
+    int ppid;
     unsigned long long utime;
     unsigned long long stime;
     char comm[256];
@@ -120,7 +122,7 @@ int collect_sample(struct proc_sample *samples, int max_count) {
 
         struct proc_sample *s = &samples[count];
         s->pid = pid;
-        if (read_stat_file(pid, &s->utime, &s->stime, &s->state, sizeof(s->state), s->comm, sizeof(s->comm)) != 0)
+        if (read_stat_file(pid, &s->utime, &s->stime, &s->ppid, &s->state, sizeof(s->state), s->comm, sizeof(s->comm)) != 0)
             continue;
 
         s->ram_kb = get_process_ram_kb(pid);
@@ -158,7 +160,7 @@ int main() {
     unsigned long long total2 = get_total_cpu_jiffies();
     int count2 = collect_sample(s2, max_procs);
 
-    printf("PID\tNOMBRE\tCPU_PCT\tMEM_PCT\tESTADO\tUSUARIO\n");
+    printf("PID\tNOMBRE\tCPU_PCT\tMEM_PCT\tESTADO\tUSUARIO\tPPID\n");
 
     for (int i = 0; i < count1 && i < count2; i++) {
         if (s1[i].pid != s2[i].pid) continue;
@@ -185,8 +187,8 @@ int main() {
             default:  snprintf(state_str, sizeof(state_str), "%c", s1[i].state); break;
         }
 
-        printf("%d\t%s\t%.1f\t%.1f\t%s\t%s\n",
-               s1[i].pid, s1[i].comm, cpu_pct, mem_pct, state_str, user);
+        printf("%d\t%s\t%.1f\t%.1f\t%s\t%s\t%d\n",
+               s1[i].pid, s1[i].comm, cpu_pct, mem_pct, state_str, user, s1[i].ppid);
     }
 
     free(s1);
