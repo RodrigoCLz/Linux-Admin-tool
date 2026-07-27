@@ -6,26 +6,6 @@ Linux Admin Tool es una herramienta de administración para sistemas Linux que i
 
 ## 2. Arquitectura del Sistema
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    GUI (Tkinter)                     │
-│  main_window.py + 6 frames (procesos, archivos...)  │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────┴──────────────────────────────┐
-│              Módulos Python (capa lógica)            │
-│  procesos.py  archivos.py  comandos.py  respaldos.py │
-│  bash_analysis.py  descargas.py                      │
-└──────────┬──────────────────────┬───────────────────┘
-           │                      │
-┌──────────┴──────────┐  ┌───────┴───────────────────┐
-│  Binarios C (sistema) │  │  Librerías Python stdlib │
-│  ps_list  ps_kill     │  │  subprocess  os  shutil  │
-│  ps_nice  file_info   │  │  threading  json  tar    │
-│  file_ops             │  │  urllib.request          │
-└──────────────────────┘  └──────────────────────────┘
-```
-
 ### 2.1 Capas
 
 - **Capa 1 - Binarios C**: Operaciones de sistema que requieren acceso directo a syscalls de Linux (lectura de `/proc`, signals, syscalls de archivos).
@@ -101,18 +81,18 @@ Descarga de archivos vía HTTP con `urllib.request`:
 
 ```
 PS-proyect/
-├── Makefile                    # Automatización de compilación y tareas
-├── requirements.txt            # Dependencias Python
+├── Makefile
+├── requirements.txt
 ├── src/
-│   ├── c_bins/                 # Código fuente C
+│   ├── c_bins/
 │   │   ├── ps_list.c
 │   │   ├── ps_kill.c
 │   │   ├── ps_nice.c
 │   │   ├── file_info.c
 │   │   └── file_ops.c
 │   └── python/
-│       ├── main.py             # Punto de entrada
-│       ├── gui/                # Interfaces gráficas
+│       ├── main.py
+│       ├── gui/
 │       │   ├── main_window.py
 │       │   ├── procesos_frame.py
 │       │   ├── archivos_frame.py
@@ -120,14 +100,14 @@ PS-proyect/
 │       │   ├── respaldos_frame.py
 │       │   ├── bash_frame.py
 │       │   └── descargas_frame.py
-│       └── modules/            # Lógica de negocio
+│       └── modules/
 │           ├── procesos.py
 │           ├── archivos.py
 │           ├── comandos.py
 │           ├── respaldos.py
 │           ├── bash_analysis.py
 │           └── descargas.py
-├── bin/                        # Binarios compilados (generado)
+├── bin/
 ├── docs/
 │   ├── documentacion_tecnica.md
 │   └── manual_usuario.md
